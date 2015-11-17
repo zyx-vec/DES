@@ -220,32 +220,23 @@ void generate_round_key_d(BIT_64 main_key) {
 }
 
 
-void process_msg(char* msg) {
-	int len = strlen(msg);
+void process_msg(unsigned char* msg) {
+	//int len = strlen(msg);
 	int i, ii;
 	for (ii = 0; ii < MAX_SIZE; ii+=8) {
 
 		BIT_64 msg_block = 0;
 		BIT_64 msg_mask = 0xFF;
-		BIT_64 ch[8];
 
 		for (; ;) {
-			ch[0] = msg[ii] & msg_mask;
-			ch[1] = msg[ii+1] & msg_mask;
-			ch[2] = msg[ii+2] & msg_mask;
-			ch[3] = msg[ii+3] & msg_mask;
-			ch[4] = msg[ii+4] & msg_mask;
-			ch[5] = msg[ii+5] & msg_mask;
-			ch[6] = msg[ii+6] & msg_mask;
-			ch[7] = msg[ii+7] & msg_mask;
-			msg_block += ch[0] << 56;
-			msg_block += ch[1] << 48;
-			msg_block += ch[2] << 40;
-			msg_block += ch[3] << 32;
-			msg_block += ch[4] << 24;
-			msg_block += ch[5] << 16;
-			msg_block += ch[6] << 8;
-			msg_block += ch[7];
+			msg_block += (msg[ii] & msg_mask) << 56;
+			msg_block += (msg[ii+1] & msg_mask) << 48;
+			msg_block += (msg[ii+2] & msg_mask) << 40;
+			msg_block += (msg[ii+3] & msg_mask) << 32;
+			msg_block += (msg[ii+4] & msg_mask) << 24;
+			msg_block += (msg[ii+5] & msg_mask) << 16;
+			msg_block += (msg[ii+6] & msg_mask) << 8;
+			msg_block += msg[ii+7] & msg_mask;
 			//printf("msg_block = 0x%llX\n", msg_block);
 			break;
 		}
@@ -284,51 +275,51 @@ void process_msg(char* msg) {
 
 			er = er ^ round_sub_key[i];	// last 48 bits
 
-			BIT_32 s_box_o = 0;			// ouput of s-box 32 bits
+			BIT_32 s_box_o = 0;			// output of s-box 32 bits
 			unsigned int row, col;
 			BIT_32 data;
 			BIT_32 col_mask = 0x0F;
 
 
-			row = (((er >> 47)&0x01)<<1) + ((er >> 42)&0x01);	//6*7	s1
+			row = ((er >> 46)&0x02) + ((er >> 42)&0x01);	//6*7	s1
 			col = (er >> 43) & col_mask;
 			data = S1[row*16+col];
 			s_box_o |= data << 28;
 
-			row = (((er >> 41)&0x01)<<1) + ((er >> 36)&0x01);	//6*6 	s2
+			row = ((er >> 40)&0x02) + ((er >> 36)&0x01);	//6*6 	s2
 			col = (er >> 37) & col_mask;
 			data = S2[row*16+col];
 			s_box_o |= data << 24;
 
-			row = (((er >> 35)&0x01)<<1) + ((er >> 30)&0x01);	//6*5 	s3
+			row = ((er >> 34)&0x02) + ((er >> 30)&0x01);	//6*5 	s3
 			col = (er >> 31) & col_mask;
 			data = S3[row*16+col];
 			s_box_o |= data << 20;
 
-			row = (((er >> 29)&0x01)<<1) + ((er >> 24)&0x01);	//6*4 	s4
+			row = ((er >> 28)&0x02) + ((er >> 24)&0x01);	//6*4 	s4
 			col = (er >> 25) & col_mask;
 			data = S4[row*16+col];
 			s_box_o |= data << 16;
 
-			row = (((er >> 23)&0x01)<<1) + ((er >> 18)&0x01);	//6*3 	s5
+			row = ((er >> 22)&0x02) + ((er >> 18)&0x01);	//6*3 	s5
 			col = (er >> 19) & col_mask;
 			data = S5[row*16+col];
 			s_box_o |= data << 12;
 
-			row = (((er >> 17)&0x01)<<1) + ((er >> 12)&0x01);	//6*2 	s6
+			row = ((er >> 16)&0x02) + ((er >> 12)&0x01);	//6*2 	s6
 			col = (er >> 13) & col_mask;
 			data = S6[row*16+col];
 			s_box_o |= data << 8;
 
-			row = (((er >> 11)&0x01)<<1) + ((er >> 6)&0x01);	//6*1 	s7
+			row = ((er >> 10)&0x02) + ((er >> 6)&0x01);	//6*1 	s7
 			col = (er >> 7) & col_mask;
 			data = S7[row*16+col];
 			s_box_o |= data << 4;
 
-			row = (((er >> 5)&0x01)<<1) + ((er >> 0)&0x01);		//6*0 	s8
+			row = ((er >> 4)&0x02) + ((er >> 0)&0x01);		//6*0 	s8
 			col = (er >> 1) & col_mask;
 			data = S8[row*16+col];
-			s_box_o |= data << 0;
+			s_box_o |= data;
 
 			// permutation in fun
 			BIT_32 fo = 0;
@@ -417,10 +408,10 @@ int main () {
 	// encryption
 	if (mode == 0) {
 		// store cipher
-		out = fopen("zyx.dat", "wb");
+		out = fopen("zyx", "wb");
 		int size;
 		
-		while ( size = fread(buf, sizeof(char), MAX_SIZE, in) ) {
+		while ( (size = fread(buf, sizeof(char), MAX_SIZE, in)) ) {
 			
 			if (size < MAX_SIZE) {
 				for (i = size; i < MAX_SIZE; i++) {
@@ -432,11 +423,11 @@ int main () {
 	}
 	// decryption
 	else {
-		// store derypted file.
-		out = fopen("result.dat", "wb");
+		// store decrypted file.
+		out = fopen("result", "wb");
 		int size;
 		
-		while ( size = fread(buf, sizeof(char), MAX_SIZE, in) ) {
+		while ( (size = fread(buf, sizeof(char), MAX_SIZE, in)) ) {
 			// fill ' '.
 			if (size < MAX_SIZE) {
 				for (i = size; i < MAX_SIZE; i++) {
